@@ -47,8 +47,8 @@ and asks to confirm (`--yes` skips the question). The key and the RPC URL are re
 Which scenarios can run depends on the chain and on what you give: `treasury`, `eip7702` and `soak` run on all four chains;
 `paths`, `call-batches`, `user-operations`, `user-operations-v07`, `x402` (needs test USDC on the account) and `sealed-fees`
 (read-only, needs no key) on Base Sepolia only; `cdp` also needs `CDP_API_KEY_ID`, `CDP_API_KEY_SECRET` and
-`CDP_WALLET_SECRET`. The others are listed as skipped, with the reason. The default is `treasury`. Costs are measured
-for three chains and an estimate for Base Sepolia (`packages/common/src/testnets.ts`).
+`CDP_WALLET_SECRET`. The others are listed as skipped, with the reason. The default is `treasury`. Costs are the measured
+cost of a treasury run on each chain, rounded up (`packages/common/src/testnets.ts`); after a run the command shows what it actually cost.
 
 ## First run of a release
 

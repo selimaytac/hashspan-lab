@@ -27,8 +27,8 @@ export interface Testnet {
   measured: boolean;
 }
 
-// Base Sepolia's runCostWei is an estimate (an OP-stack chain like OP Sepolia, rounded up five times); the others
-// were measured on 2026-10-04, see lowBalanceWei.
+// runCostWei: what one treasury run cost on the live testnets (`pnpm lab testnet`, CI run 37380039408, 2026-10-06:
+// Base Sepolia 0.00000074, Ethereum Sepolia 0.000136, Arbitrum Sepolia 0.0000091, OP Sepolia 0.00000017 ETH), rounded up.
 // One lab account for every testnet: a chain's own key variable wins, else the Base Sepolia key is used, so funding
 // the same address on each chain is enough. Public RPCs that answered eth_chainId on 2026-10-04.
 const lab = (prefix: string, defaultRpcUrl: string): TestnetEnvNames => ({
@@ -48,7 +48,7 @@ export const TESTNETS: readonly Testnet[] = [
     opStack: true,
     lowBalanceWei: 500_000_000_000_000n,
     runCostWei: 1_000_000_000_000n,
-    measured: false,
+    measured: true,
   },
   {
     id: 'sepolia',
@@ -58,7 +58,7 @@ export const TESTNETS: readonly Testnet[] = [
     explorer: 'https://sepolia.etherscan.io',
     opStack: false,
     lowBalanceWei: 500_000_000_000_000n,
-    runCostWei: 125_000_000_000_000n,
+    runCostWei: 150_000_000_000_000n,
     measured: true,
   },
   {
@@ -69,7 +69,7 @@ export const TESTNETS: readonly Testnet[] = [
     explorer: 'https://sepolia.arbiscan.io',
     opStack: false,
     lowBalanceWei: 50_000_000_000_000n,
-    runCostWei: 7_600_000_000_000n,
+    runCostWei: 10_000_000_000_000n,
     measured: true,
   },
   {

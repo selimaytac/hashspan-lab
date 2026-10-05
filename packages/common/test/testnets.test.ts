@@ -17,9 +17,9 @@ describe('testnet', () => {
     ]);
   });
 
-  it('has a cost per run for every testnet, measured except on Base Sepolia', () => {
+  it('has a measured cost per run for every testnet', () => {
     expect(TESTNETS.map((net) => [net.id, net.runCostWei > 0n, net.measured])).toEqual([
-      ['base-sepolia', true, false],
+      ['base-sepolia', true, true],
       ['sepolia', true, true],
       ['arbitrum-sepolia', true, true],
       ['op-sepolia', true, true],
