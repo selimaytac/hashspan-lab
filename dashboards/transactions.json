@@ -1,0 +1,419 @@
+{
+  "title": "hashspan-lab transactions",
+  "uid": "hashspan-lab-transactions",
+  "description": "Transactions, confirmation durations and fees from hashspan's histograms and spans.",
+  "tags": ["hashspan-lab"],
+  "timezone": "utc",
+  "schemaVersion": 41,
+  "version": 1,
+  "editable": true,
+  "time": {
+    "from": "now-7d",
+    "to": "now"
+  },
+  "refresh": "",
+  "templating": {
+    "list": [
+      {
+        "name": "datasource",
+        "label": "Metrics",
+        "type": "datasource",
+        "query": "prometheus",
+        "regex": "/^(Prometheus|grafanacloud-.+-prom)$/"
+      },
+      {
+        "name": "traces",
+        "label": "Traces",
+        "type": "datasource",
+        "query": "tempo",
+        "regex": "/^(Tempo|grafanacloud-.+-traces)$/"
+      },
+      {
+        "name": "job",
+        "label": "Service",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "query": {
+          "query": "label_values(blockchain_client_send_duration_seconds_count, job)",
+          "refId": "job"
+        },
+        "definition": "label_values(blockchain_client_send_duration_seconds_count, job)",
+        "includeAll": true,
+        "multi": true,
+        "allValue": ".+",
+        "refresh": 2,
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        }
+      }
+    ]
+  },
+  "annotations": {
+    "list": []
+  },
+  "panels": [
+    {
+      "type": "text",
+      "title": "About",
+      "gridPos": {
+        "h": 3,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "Each run is a short-lived process with its own `instance` (`service.instance.id`), so its cumulative histograms start at zero: the queries take each run's last value (`max_over_time`) and sum over runs, instead of `rate()`, which needs two samples per series. Each run exports its metrics once, at its end, so a series has one sample per run: time series use 1 hour bars, so a run shows once its hour has passed, and a run whose exports straddle an hour boundary counts in both. Replaced transactions are left out of the confirmation durations."
+      },
+      "id": 1
+    },
+    {
+      "type": "bargauge",
+      "title": "Confirmations by outcome (time range)",
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 0,
+        "y": 3
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (blockchain_tx_status, error_type) (max_over_time(blockchain_client_confirmation_duration_seconds_count{job=~\"$job\"}[$__range]))",
+          "legendFormat": "{{blockchain_tx_status}}{{error_type}}",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "options": {
+        "displayMode": "basic",
+        "orientation": "horizontal",
+        "showUnfilled": true,
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "id": 2
+    },
+    {
+      "type": "bargauge",
+      "title": "Sends by outcome (time range)",
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 8,
+        "y": 3
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "label_replace(sum by (error_type) (max_over_time(blockchain_client_send_duration_seconds_count{job=~\"$job\"}[$__range])), \"error_type\", \"hash returned\", \"error_type\", \"\")",
+          "legendFormat": "{{error_type}}",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "options": {
+        "displayMode": "basic",
+        "orientation": "horizontal",
+        "showUnfilled": true,
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "displayName": "${__series.name}"
+        },
+        "overrides": []
+      },
+      "description": "Failed sends by error.type; the others returned their hash.",
+      "id": 3
+    },
+    {
+      "type": "stat",
+      "title": "Fees paid (time range)",
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 16,
+        "y": 3
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (blockchain_chain_id) (max_over_time(blockchain_client_fee_sum{job=~\"$job\",blockchain_fee_payer=\"\"}[$__range])) / 1e9",
+          "legendFormat": "chain {{blockchain_chain_id}}",
+          "refId": "A",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "none",
+        "graphMode": "none",
+        "textMode": "value_and_name"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "suffix: gwei",
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "description": "Sum of blockchain.tx.fee (execution fee plus L1 data fee) over the time range, in gwei.",
+      "id": 4
+    },
+    {
+      "type": "timeseries",
+      "title": "Confirmations by outcome",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 10
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "interval": "1h",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (blockchain_tx_status, error_type) (max_over_time(blockchain_client_confirmation_duration_seconds_count{job=~\"$job\"}[$__interval]))",
+          "legendFormat": "{{blockchain_tx_status}}{{error_type}}",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 80,
+            "stacking": {
+              "mode": "normal"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "id": 5
+    },
+    {
+      "type": "timeseries",
+      "title": "Confirmation duration p50 / p95",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 10
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "interval": "1h",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.5, sum by (le, blockchain_chain_id) (max_over_time(blockchain_client_confirmation_duration_seconds_bucket{job=~\"$job\",blockchain_tx_status!=\"replaced\"}[$__interval])))",
+          "legendFormat": "p50 chain {{blockchain_chain_id}}",
+          "refId": "A",
+          "range": true
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le, blockchain_chain_id) (max_over_time(blockchain_client_confirmation_duration_seconds_bucket{job=~\"$job\",blockchain_tx_status!=\"replaced\"}[$__interval])))",
+          "legendFormat": "p95 chain {{blockchain_chain_id}}",
+          "refId": "B",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "drawStyle": "points",
+            "pointSize": 8
+          }
+        },
+        "overrides": []
+      },
+      "description": "Interpolated within hashspan's bucket boundaries (0.05 s to 300 s).",
+      "id": 6
+    },
+    {
+      "type": "timeseries",
+      "title": "Average fee per transaction, per chain",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 18
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "interval": "1h",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (blockchain_chain_id) (max_over_time(blockchain_client_fee_sum{job=~\"$job\",blockchain_fee_payer=\"\"}[$__interval])) / sum by (blockchain_chain_id) (max_over_time(blockchain_client_fee_count{job=~\"$job\",blockchain_fee_payer=\"\"}[$__interval])) / 1e9",
+          "legendFormat": "chain {{blockchain_chain_id}}",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "suffix: gwei",
+          "decimals": 2,
+          "custom": {
+            "drawStyle": "points",
+            "pointSize": 8
+          }
+        },
+        "overrides": []
+      },
+      "id": 7
+    },
+    {
+      "type": "timeseries",
+      "title": "Send duration p50 / p95",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 18
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "interval": "1h",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.5, sum by (le, blockchain_chain_id) (max_over_time(blockchain_client_send_duration_seconds_bucket{job=~\"$job\"}[$__interval])))",
+          "legendFormat": "p50 chain {{blockchain_chain_id}}",
+          "refId": "A",
+          "range": true
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le, blockchain_chain_id) (max_over_time(blockchain_client_send_duration_seconds_bucket{job=~\"$job\"}[$__interval])))",
+          "legendFormat": "p95 chain {{blockchain_chain_id}}",
+          "refId": "B",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "custom": {
+            "drawStyle": "points",
+            "pointSize": 8
+          }
+        },
+        "overrides": []
+      },
+      "id": 8
+    },
+    {
+      "type": "table",
+      "title": "Confirm spans",
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 26
+      },
+      "datasource": {
+        "type": "tempo",
+        "uid": "${traces}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "tempo",
+            "uid": "${traces}"
+          },
+          "refId": "A",
+          "queryType": "traceql",
+          "tableType": "spans",
+          "limit": 50,
+          "query": "{span.blockchain.operation.name = \"confirm\"} | select(span.blockchain.tx.status, span.error.type, span.blockchain.tx.fee, span.blockchain.tx.revert.reason)"
+        }
+      ],
+      "id": 9
+    }
+  ]
+}

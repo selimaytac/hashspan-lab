@@ -1,0 +1,13 @@
+packages:
+  - packages/*
+  - scenarios/*
+# Dependencies run no build scripts: a new one that has a script fails the install until it is listed here (allowed
+# in onlyBuiltDependencies, or ignored). esbuild's postinstall only fetches a binary that tsx finds without it.
+strictDepBuilds: true
+ignoredBuiltDependencies:
+  - esbuild
+# A version must be a day old before it is installed (a hijacked release is usually caught within hours), except the
+# lab's own subject: a new @hashspan/* release is tested as soon as Dependabot proposes it.
+minimumReleaseAge: 1440
+minimumReleaseAgeExclude:
+  - "@hashspan/*"

@@ -1,0 +1,33 @@
+# Receives OTLP from the scenarios and forwards traces to Tempo, metrics to Prometheus' OTLP receiver.
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch:
+
+exporters:
+  otlp_grpc/tempo:
+    endpoint: tempo:4317
+    tls:
+      insecure: true
+  # Prometheus serves OTLP at /api/v1/otlp/v1/metrics; the exporter appends /v1/metrics.
+  otlp_http/prometheus:
+    endpoint: http://prometheus:9090/api/v1/otlp
+    tls:
+      insecure: true
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlp_grpc/tempo]
+    metrics:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlp_http/prometheus]

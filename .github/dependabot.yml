@@ -1,0 +1,42 @@
+# Keeps the lab on the published hashspan packages: a new @hashspan/* release opens one pull request for every
+# workspace package, whose CI runs the scenarios' Anvil tests against it. Other dependencies and the pinned actions
+# and stack images are grouped weekly.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: daily
+    groups:
+      hashspan:
+        patterns: ["@hashspan/*"]
+      opentelemetry:
+        patterns: ["@opentelemetry/*"]
+      tooling:
+        patterns: ["*"]
+        exclude-patterns: ["@hashspan/*", "@opentelemetry/*"]
+    open-pull-requests-limit: 5
+    # A week, at least minimumReleaseAge in pnpm-workspace.yaml (a day), so a compromised release is likely pulled
+    # before it is proposed; @hashspan/* releases come at once, since the lab tests them.
+    cooldown:
+      default-days: 7
+      exclude:
+        - "@hashspan/*"
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      actions:
+        patterns: ["*"]
+  - package-ecosystem: docker-compose
+    directory: /stack
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      stack:
+        patterns: ["*"]

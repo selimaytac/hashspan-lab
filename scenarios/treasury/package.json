@@ -1,0 +1,28 @@
+{
+  "name": "@hashspan-lab/scenario-treasury",
+  "private": true,
+  "description": "The treasury agent on Base Sepolia: pays itself, deploys a vault that rejects withdrawals, tries one.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "start": "tsx src/main.ts",
+    "start:local": "tsx src/local.ts",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@ai-sdk/otel": "1.0.127",
+    "@hashspan-lab/common": "workspace:*",
+    "@hashspan/core": "1.0.0-rc.0",
+    "@hashspan/viem": "1.0.0-rc.0",
+    "@opentelemetry/api": "1.9.1",
+    "@opentelemetry/sdk-metrics": "2.11.0",
+    "@opentelemetry/sdk-trace-base": "2.11.0",
+    "ai": "7.0.127",
+    "viem": "2.57.2",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "prool": "0.2.16",
+    "tsx": "4.23.15"
+  }
+}

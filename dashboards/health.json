@@ -1,0 +1,215 @@
+{
+  "title": "hashspan-lab health",
+  "uid": "hashspan-lab-health",
+  "description": "What went wrong besides reverts: confirmations that gave up or failed, failed sends, and failing or slow JSON-RPC requests.",
+  "tags": ["hashspan-lab"],
+  "timezone": "utc",
+  "schemaVersion": 41,
+  "version": 1,
+  "editable": true,
+  "time": {
+    "from": "now-7d",
+    "to": "now"
+  },
+  "refresh": "",
+  "annotations": {
+    "list": []
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "datasource",
+        "label": "Metrics",
+        "type": "datasource",
+        "query": "prometheus",
+        "regex": "/^(Prometheus|grafanacloud-.+-prom)$/"
+      },
+      {
+        "name": "traces",
+        "label": "Traces",
+        "type": "datasource",
+        "query": "tempo",
+        "regex": "/^(Tempo|grafanacloud-.+-traces)$/"
+      },
+      {
+        "name": "job",
+        "label": "Service",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "query": {
+          "query": "label_values(blockchain_client_send_duration_seconds_count, job)",
+          "refId": "job"
+        },
+        "definition": "label_values(blockchain_client_send_duration_seconds_count, job)",
+        "includeAll": true,
+        "multi": true,
+        "allValue": ".+",
+        "refresh": 2,
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "text",
+      "title": "About",
+      "gridPos": {
+        "h": 3,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "`error.type` on the metrics is an error class name ending in `Error` or a lower-case code, else `_OTHER` (hashspan semconv). A reverted transaction is chain data, shown on the transactions dashboard, not here. JSON-RPC spans come from `traceTransport()` (the paths scenario); `eth_call` answered with code 3 (execution reverted) is the replay that decodes a revert reason, expected for every reverted transaction, so the table leaves it out."
+      },
+      "id": 1
+    },
+    {
+      "type": "timeseries",
+      "title": "Confirmations without a receipt, by error.type",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 3
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "interval": "1h",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (error_type, job) (max_over_time(blockchain_client_confirmation_duration_seconds_count{job=~\"$job\",error_type!=\"\"}[$__interval]))",
+          "legendFormat": "{{job}} {{error_type}}",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 80,
+            "stacking": {
+              "mode": "normal"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "id": 2
+    },
+    {
+      "type": "timeseries",
+      "title": "Failed sends, by error.type",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 3
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "interval": "1h",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum by (error_type, job) (max_over_time(blockchain_client_send_duration_seconds_count{job=~\"$job\",error_type!=\"\"}[$__interval]))",
+          "legendFormat": "{{job}} {{error_type}}",
+          "refId": "A",
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 80,
+            "stacking": {
+              "mode": "normal"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "id": 3
+    },
+    {
+      "type": "table",
+      "title": "Failed JSON-RPC requests (without revert replays)",
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 11
+      },
+      "datasource": {
+        "type": "tempo",
+        "uid": "${traces}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "tempo",
+            "uid": "${traces}"
+          },
+          "refId": "A",
+          "queryType": "traceql",
+          "tableType": "spans",
+          "limit": 50,
+          "query": "{span.rpc.system.name = \"jsonrpc\" && status = error && (span.rpc.method != \"eth_call\" || span.rpc.response.status_code != 3)} | select(resource.service.name, span.rpc.method, span.error.type, span.rpc.response.status_code)"
+        }
+      ],
+      "id": 4
+    },
+    {
+      "type": "table",
+      "title": "Slow JSON-RPC requests (over 2 s)",
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 21
+      },
+      "datasource": {
+        "type": "tempo",
+        "uid": "${traces}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "tempo",
+            "uid": "${traces}"
+          },
+          "refId": "A",
+          "queryType": "traceql",
+          "tableType": "spans",
+          "limit": 50,
+          "query": "{span.rpc.system.name = \"jsonrpc\" && duration > 2s} | select(resource.service.name, span.rpc.method)"
+        }
+      ],
+      "id": 5
+    }
+  ]
+}

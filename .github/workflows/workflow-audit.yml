@@ -1,0 +1,48 @@
+# Audits the GitHub Actions workflows: zizmor for injection, excessive permissions, credential persistence and
+# unpinned actions; actionlint (with shellcheck) for syntax and expressions. Both fail the job on a finding; a finding
+# that stays needs an inline `zizmor: ignore[...]` comment with its reason.
+name: Workflow audit
+
+on:
+  pull_request:
+    paths: [".github/workflows/**", ".github/actions/**"]
+  push:
+    branches: [main]
+    paths: [".github/workflows/**", ".github/actions/**"]
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  zizmor:
+    name: zizmor
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # advanced-security off: findings fail the job instead of going to code scanning, which this private repository
+      # does not have.
+      - uses: zizmorcore/zizmor-action@cc914d7f3750a2d13d75c7f184a1060aa0e9d482 # v0.6.4
+        with:
+          version: 1.30.1
+          advanced-security: false
+          min-severity: low
+
+  actionlint:
+    name: actionlint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # actionlint 1.7.7, pinned by digest like the actions by commit SHA.
+      - uses: docker://rhysd/actionlint@sha256:887a259a5a534f3c4f36cb02dca341673c6089431057242cdc931e9f133147e9
+        with:
+          args: -no-color

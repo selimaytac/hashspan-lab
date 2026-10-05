@@ -1,0 +1,24 @@
+{
+  "name": "@hashspan-lab/common",
+  "private": true,
+  "description": "Toolkit for running traced agents on public testnets: environment, chain guards, telemetry, span checks.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@opentelemetry/api": "1.9.1",
+    "@opentelemetry/exporter-metrics-otlp-proto": "0.222.0",
+    "@opentelemetry/exporter-trace-otlp-proto": "0.222.0",
+    "@opentelemetry/resources": "2.11.0",
+    "@opentelemetry/sdk-metrics": "2.11.0",
+    "@opentelemetry/sdk-trace-base": "2.11.0",
+    "@opentelemetry/sdk-trace-node": "2.11.0",
+    "@opentelemetry/semantic-conventions": "1.43.0",
+    "viem": "2.57.2"
+  }
+}

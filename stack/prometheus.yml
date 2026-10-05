@@ -1,0 +1,24 @@
+# Metrics arrive over OTLP only (--web.enable-otlp-receiver); nothing is scraped.
+# Settings from https://prometheus.io/docs/guides/opentelemetry/.
+global:
+  evaluation_interval: 1m
+
+otlp:
+  # service.name becomes `job` and service.instance.id becomes `instance`; promote the other resource attributes the
+  # dashboards filter on.
+  promote_resource_attributes:
+    - service.name
+    - service.instance.id
+    - service.namespace
+    - service.version
+    - deployment.environment.name
+  keep_identifying_resource_attributes: true
+  # The default, UnderscoreEscapingWithSuffixes, written out: names get unit and type suffixes
+  # (blockchain_client_send_duration_seconds_bucket), as Grafana Cloud's OTLP endpoint names them too, so one
+  # dashboard works on both.
+  translation_strategy: UnderscoreEscapingWithSuffixes
+
+storage:
+  tsdb:
+    # A short-lived process exports its last points at shutdown, possibly after newer ones from another run.
+    out_of_order_time_window: 30m

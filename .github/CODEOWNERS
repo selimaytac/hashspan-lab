@@ -1,0 +1,5 @@
+# Changes to what runs on a contributor's machine or in CI need the owner's review.
+*            @selimaytac
+/.github/    @selimaytac
+/scripts/    @selimaytac
+/stack/      @selimaytac

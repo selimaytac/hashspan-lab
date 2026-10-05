@@ -1,0 +1,131 @@
+{
+  "title": "hashspan-lab x402 payments",
+  "uid": "hashspan-lab-x402",
+  "description": "x402 payments of the agents, from the payment spans of @hashspan/x402.",
+  "tags": ["hashspan-lab"],
+  "timezone": "utc",
+  "schemaVersion": 41,
+  "version": 1,
+  "editable": true,
+  "time": {
+    "from": "now-7d",
+    "to": "now"
+  },
+  "refresh": "",
+  "annotations": {
+    "list": []
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "datasource",
+        "label": "Metrics",
+        "type": "datasource",
+        "query": "prometheus",
+        "regex": "/^(Prometheus|grafanacloud-.+-prom)$/"
+      },
+      {
+        "name": "traces",
+        "label": "Traces",
+        "type": "datasource",
+        "query": "tempo",
+        "regex": "/^(Tempo|grafanacloud-.+-traces)$/"
+      },
+      {
+        "name": "job",
+        "label": "Service",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "query": {
+          "query": "label_values(blockchain_client_send_duration_seconds_count, job)",
+          "refId": "job"
+        },
+        "definition": "label_values(blockchain_client_send_duration_seconds_count, job)",
+        "includeAll": true,
+        "multi": true,
+        "allValue": ".+",
+        "refresh": 2,
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "text",
+      "title": "About",
+      "gridPos": {
+        "h": 3,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "Payments have no metrics (hashspan ADR 0020): everything here comes from `payment` spans. `blockchain.payment.verified` is set when a reader checked the settlement receipt (ADR 0017); it is absent when no check was possible. Empty until an x402 scenario runs."
+      },
+      "id": 1
+    },
+    {
+      "type": "table",
+      "title": "Payments",
+      "gridPos": {
+        "h": 12,
+        "w": 24,
+        "x": 0,
+        "y": 3
+      },
+      "datasource": {
+        "type": "tempo",
+        "uid": "${traces}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "tempo",
+            "uid": "${traces}"
+          },
+          "refId": "A",
+          "queryType": "traceql",
+          "tableType": "spans",
+          "limit": 50,
+          "query": "{span.blockchain.operation.name = \"payment\"} | select(resource.service.name, span.blockchain.payment.status, span.blockchain.payment.verified, span.blockchain.payment.amount, span.blockchain.payment.settled_amount, span.x402.scheme, span.error.type)"
+        }
+      ],
+      "id": 2
+    },
+    {
+      "type": "table",
+      "title": "Payments not verified or failed",
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 15
+      },
+      "datasource": {
+        "type": "tempo",
+        "uid": "${traces}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "tempo",
+            "uid": "${traces}"
+          },
+          "refId": "A",
+          "queryType": "traceql",
+          "tableType": "spans",
+          "limit": 50,
+          "query": "{span.blockchain.operation.name = \"payment\" && (span.blockchain.payment.verified = false || status = error)} | select(resource.service.name, span.blockchain.payment.status, span.blockchain.payment.verified, span.error.type)"
+        }
+      ],
+      "id": 3
+    }
+  ]
+}

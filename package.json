@@ -1,0 +1,35 @@
+{
+  "name": "hashspan-lab",
+  "private": true,
+  "description": "Real AI agents on public testnets, traced with the published hashspan packages.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "packageManager": "pnpm@10.30.3",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "lint": "biome check .",
+    "format": "biome check --write .",
+    "typecheck": "pnpm -r typecheck && tsc -p scripts",
+    "test": "vitest run --project unit",
+    "test:integration": "vitest run --project integration",
+    "test:all": "vitest run",
+    "lab": "tsx scripts/lab.ts"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.15",
+    "@types/node": "24.19.1",
+    "prool": "0.2.16",
+    "tsx": "4.23.15",
+    "typescript": "7.0.2",
+    "viem": "2.57.2",
+    "vitest": "5.0.3"
+  },
+  "pnpm": {
+    "//": "tar: prool pins tar@7.2.0 but never imports it (https://github.com/wevm/prool/issues/112). Remove once prool drops or bumps it.",
+    "overrides": {
+      "tar": ">=7.5.21"
+    }
+  }
+}
