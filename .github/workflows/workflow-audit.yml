@@ -42,7 +42,9 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      # actionlint 1.7.7, pinned by digest like the actions by commit SHA.
-      - uses: docker://rhysd/actionlint@sha256:887a259a5a534f3c4f36cb02dca341673c6089431057242cdc931e9f133147e9
-        with:
-          args: -no-color
+      # actionlint 1.7.7, pinned by digest like the actions by commit SHA. A step that runs the image, not
+      # `uses: docker://`: a repository that only allows pinned actions does not start a workflow with a docker action.
+      - name: actionlint
+        run: |
+          docker run --rm -v "$PWD:/repo" -w /repo \
+            rhysd/actionlint@sha256:887a259a5a534f3c4f36cb02dca341673c6089431057242cdc931e9f133147e9 -no-color
