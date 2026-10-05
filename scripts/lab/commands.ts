@@ -24,6 +24,8 @@ export const USAGE = `usage: pnpm lab <command>
   status                show the containers, the ports and the links
   first-run [--version <v>]
                         what a new user does: the README quick start of the published @hashspan/viem (default tag rc)
+  conformance [--since <s>]
+                        check the telemetry the stack received against the semantic conventions of @hashspan/core
   connect               print the environment variables that point your own agent at the lab's collector
 
 scenarios: ${LOCAL_SCENARIOS.join(', ')}
@@ -33,6 +35,7 @@ export type Command =
   | { name: 'up'; skipInstall: boolean }
   | { name: 'down' | 'nuke' | 'status' | 'connect' | 'help' }
   | { name: 'first-run'; version: string }
+  | { name: 'conformance'; since: string }
   | { name: 'run'; scenario: string }
   | {
       name: 'testnet';
@@ -57,10 +60,18 @@ export function parseCommand(argv: readonly string[]): Command {
       save: { type: 'boolean', default: false },
       yes: { type: 'boolean', default: false },
       version: { type: 'string' },
+      since: { type: 'string' },
     },
   });
   const [name, ...rest] = positionals;
   if (values.help || name === undefined || name === 'help') return { name: 'help' };
+  if (name !== 'conformance' && values.since !== undefined) {
+    throw new Error('--since belongs to the conformance command');
+  }
+  if (name === 'conformance') {
+    if (rest.length > 0) throw new Error(`conformance takes no argument, got: ${rest.join(' ')}`);
+    return { name: 'conformance', since: values.since ?? '3600' };
+  }
   if (name !== 'first-run' && values.version !== undefined) {
     throw new Error('--version belongs to the first-run command');
   }

@@ -223,13 +223,14 @@ async function up(skipInstall: boolean): Promise<number> {
 
   console.log('\n== Dashboards');
   const dashboardsOk = await checkDashboards();
+  const conformant = conformance('3600') === 0;
   await printLinks();
   const minutes = ((Date.now() - started) / 60_000).toFixed(1);
   console.log(
-    `\n${failed.length === 0 && dashboardsOk ? 'Lab is up' : 'Lab is up with problems'} (${minutes} min)`,
+    `\n${failed.length === 0 && dashboardsOk && conformant ? 'Lab is up' : 'Lab is up with problems'} (${minutes} min)`,
   );
   console.log('Stop it with `pnpm lab down`, remove everything with `pnpm lab nuke`.');
-  return failed.length === 0 && dashboardsOk ? 0 : 1;
+  return failed.length === 0 && dashboardsOk && conformant ? 0 : 1;
 }
 
 /** Reads a line from the terminal without echoing it. */
@@ -363,6 +364,21 @@ async function testnetCommand(
   return failed.length === 0 ? 0 : 1;
 }
 
+/** The telemetry of the last `since` seconds against the conventions @hashspan/core exports. */
+function conformance(since: string): number {
+  console.log('\n== Conformance with the semantic conventions');
+  return step('Conformance', 'pnpm', [
+    '--filter',
+    './packages/conformance',
+    '--silent',
+    'start',
+    '--since',
+    since,
+  ])
+    ? 0
+    : 1;
+}
+
 async function status(): Promise<number> {
   step('Containers', 'docker', [...COMPOSE, 'ps']);
   console.log('\nServices:');
@@ -414,6 +430,8 @@ async function main(): Promise<number> {
       return status();
     case 'testnet':
       return testnetCommand(command);
+    case 'conformance':
+      return conformance(command.since);
     case 'first-run':
       try {
         return await firstRun({ version: command.version, root });

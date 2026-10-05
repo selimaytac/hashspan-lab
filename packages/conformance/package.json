@@ -1,0 +1,17 @@
+{
+  "name": "@hashspan-lab/conformance",
+  "private": true,
+  "description": "Checks the telemetry the lab received against the semantic conventions that @hashspan/core exports.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "start": "tsx src/main.ts",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@hashspan/core": "1.0.0-rc.0"
+  },
+  "devDependencies": {
+    "tsx": "4.23.15"
+  }
+}
