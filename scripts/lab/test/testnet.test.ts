@@ -14,6 +14,7 @@ import {
   saveSecret,
   scenarioEnv,
   scrub,
+  spentLine,
   type TestnetDeps,
   type TestnetOptions,
 } from '../testnet.js';
@@ -169,7 +170,7 @@ describe('prepareTestnetRun', () => {
     expect(shown).toContain('Base Sepolia (84532)');
     expect(shown).toContain(privateKeyToAccount(secret).address);
     expect(shown).toContain('1 ETH');
-    expect(shown).toContain('estimate');
+    expect(shown).toContain('measured');
     expect(shown).not.toContain(bare);
   });
 
@@ -239,6 +240,38 @@ describe('prepareTestnetRun', () => {
     await expect(
       prepareTestnetRun(options({ chain: 'sepolia', scenarios: ['paths'] }), value),
     ).rejects.toThrow('no scenario can run');
+  });
+});
+
+describe('spentLine', () => {
+  it('shows what the run cost against what was shown before', () => {
+    const line = spentLine(
+      2_000_000_000_000_000n,
+      1_999_000_000_000_000n,
+      1_000_000_000_000n,
+      false,
+    );
+    expect(line).toContain('0.000001 ETH');
+    expect(line).toContain('estimate');
+    expect(line).toContain('balance now 0.001999 ETH');
+  });
+
+  it('shows no cost when the balance grew meanwhile', () => {
+    expect(spentLine(1n, 5n, 1n, true)).toContain('spent:     0 ETH');
+  });
+});
+
+describe('the plan keeps the account of the run', () => {
+  it('returns the address and the balance before the run, and nothing without a sender', async () => {
+    const { value } = deps();
+    const plan = await prepareTestnetRun(options(), value);
+    expect(plan?.account?.balance).toBe(10n ** 18n);
+    expect(plan?.account?.address).toBe(privateKeyToAccount(secret).address);
+    const readOnly = await prepareTestnetRun(
+      options({ scenarios: ['sealed-fees'] }),
+      deps({ env: {} }).value,
+    );
+    expect(readOnly?.account).toBeUndefined();
   });
 });
 

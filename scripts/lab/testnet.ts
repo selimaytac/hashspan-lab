@@ -176,7 +176,21 @@ export interface TestnetPlan {
   rpcUrl: string;
   /** Undefined when no chosen scenario sends anything. */
   secret: Hex | undefined;
+  /** The account and its balance before the run, for what the run cost. Undefined when nothing is sent. */
+  account?: { address: Address; balance: bigint };
   scenarios: string[];
+}
+
+/** What a run cost: the balance before and after. A balance that grew (a faucet drip meanwhile) shows as no cost. */
+export function spentLine(
+  before: bigint,
+  after: bigint,
+  estimate: bigint,
+  measured: boolean,
+): string {
+  const spent = before > after ? before - after : 0n;
+  const basis = measured ? 'measured' : 'estimate';
+  return `spent:     ${eth(spent)} (balance now ${eth(after)}; the cost shown before was ${eth(estimate)}, ${basis})`;
 }
 
 const eth = (value: bigint) => `${formatEther(value)} ETH`;
@@ -200,6 +214,7 @@ export async function prepareTestnetRun(
   const senders = eligibility.run.filter((name) => TESTNET_SCENARIOS[name]?.sends).length;
 
   let secret: Hex | undefined;
+  let account: { address: Address; balance: bigint } | undefined;
   if (senders > 0) {
     const given =
       deps.env.LAB_PRIVATE_KEY ||
@@ -214,6 +229,7 @@ export async function prepareTestnetRun(
   if (secret) {
     const address = privateKeyToAccount(secret).address;
     const balance = await deps.balance(rpcUrl, address);
+    account = { address, balance };
     const cost = net.runCostWei * BigInt(senders);
     const basis = net.measured ? 'measured' : 'estimate';
     deps.log(`account:   ${address} (shown here only)`);
@@ -230,7 +246,7 @@ export async function prepareTestnetRun(
     saveSecret(deps.savedFile, secret);
     deps.log(`key saved to ${deps.savedFile} (mode 600, not tracked by git)`);
   }
-  return { net, rpcUrl, secret, scenarios: eligibility.run };
+  return { net, rpcUrl, secret, ...(account ? { account } : {}), scenarios: eligibility.run };
 }
 
 /** The environment of one scenario: the testnet's own variables, never the generic LAB_PRIVATE_KEY. */

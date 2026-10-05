@@ -25,6 +25,8 @@ import {
   SAVED_FILE,
   scenarioEnv,
   scrub,
+  spentLine,
+  TESTNET_SCENARIOS,
   type TestnetDeps,
 } from './lab/testnet.js';
 
@@ -339,6 +341,22 @@ async function testnetCommand(
     } else {
       failed.push(name);
       console.log(`FAIL ${name} (${seconds}s); last output:\n${tail(text)}`);
+    }
+  }
+  if (plan.account) {
+    try {
+      const after = await rpcBalance(plan.rpcUrl, plan.account.address);
+      const senders = plan.scenarios.filter((name) => TESTNET_SCENARIOS[name]?.sends).length;
+      console.log(
+        spentLine(
+          plan.account.balance,
+          after,
+          plan.net.runCostWei * BigInt(senders),
+          plan.net.measured,
+        ),
+      );
+    } catch {
+      console.log('spent:     the balance could not be read after the run');
     }
   }
   await printLinks();
