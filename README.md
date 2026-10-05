@@ -8,13 +8,17 @@ Status: work in progress.
 
 ## Run it locally
 
-You need Docker, Node from `.nvmrc` (`nvm use`) and pnpm via corepack (`corepack enable pnpm`). No key and no account.
+You need Docker, Node from `.nvmrc` (install [nvm](https://github.com/nvm-sh/nvm) if you do not have it) and pnpm via
+corepack. No key and no account. The first run pulls about 6 GiB of Docker images and dependencies and takes about 4
+minutes; later runs are faster.
 
 ```sh
-make demo        # pnpm install --frozen-lockfile, then pnpm lab up
+nvm use && corepack enable pnpm   # in every new terminal: the Node.js of .nvmrc
+make demo                         # pnpm install --frozen-lockfile, then pnpm lab up
 ```
 
-With the dependencies installed, `pnpm lab up` is the same.
+`make demo` stops early with a clear message when the shell has another Node.js. With the dependencies installed,
+`pnpm lab up` is the same.
 
 `pnpm lab up` checks your machine (each failure says what to do), starts the stack (collector, Tempo, Prometheus,
 Grafana), runs every scenario on a local chain, checks that the dashboards show data and prints their links, with an example trace.
@@ -26,8 +30,14 @@ pnpm lab down             # stop, keep the data
 pnpm lab nuke             # remove containers, volumes, images and .tools
 ```
 
-Grafana is on `http://127.0.0.1:13000` (no login), the collector takes OTLP on `127.0.0.1:14317` (gRPC) and
-`http://127.0.0.1:14318` (HTTP). The ports differ from the OTLP defaults so the stack runs beside another local backend.
+| Service | Address |
+|---|---|
+| Grafana | `http://127.0.0.1:13000`: the dashboards open without a login (only Grafana's Explore asks for one, `admin` / `admin`) |
+| Prometheus | `http://127.0.0.1:19090` (metrics arrive by OTLP push, so its targets page is empty) |
+| Tempo | `http://127.0.0.1:13200` (traces) |
+| Collector | OTLP on `127.0.0.1:14317` (gRPC) and `http://127.0.0.1:14318` (HTTP) |
+
+The ports differ from the OTLP defaults so the stack runs beside another local backend.
 `make help` lists the other targets. Tests never touch a public network: `make check` runs lint, typecheck and unit
 tests, `make test-integration` runs the chain tests against a local Anvil.
 
