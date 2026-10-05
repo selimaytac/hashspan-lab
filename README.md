@@ -71,6 +71,15 @@ up (`pnpm lab up`). A command in the README that the lab does not know fails the
 change of the quick start is noticed; the example's code runs with an environment that holds no key and no token.
 `.github/workflows/first-run.yml` runs it weekly for `rc` and `latest`.
 
+## Conformance with the semantic conventions
+
+`pnpm lab conformance [--since <seconds>]` (it also runs at the end of `pnpm lab up`) reads the span attributes in Tempo
+and the metrics in Prometheus of the last hour and checks them against the semantic conventions that `@hashspan/core`
+exports (`ATTR_*`, `METRIC_*` and the documented values): an attribute of the `blockchain.` or `x402.` namespace, a
+metric, a metric label or a value of a closed set that the conventions do not have fails the check, and a documented
+metric without any series does too. It also lists the documented attributes that no scenario exercised, so the gaps of the
+lab are visible. The contract is read from the release under test, not copied.
+
 ## Use the lab with your own agent
 
 `pnpm lab connect` prints the three environment variables (`OTEL_EXPORTER_OTLP_ENDPOINT=http://127.0.0.1:14318`,

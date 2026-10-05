@@ -119,3 +119,15 @@ describe('connectOutput', () => {
     expect(connectOutput(false)).toContain('pnpm lab up');
   });
 });
+
+describe('parseCommand conformance', () => {
+  it('defaults to the last hour and takes --since', () => {
+    expect(parseCommand(['conformance'])).toEqual({ name: 'conformance', since: '3600' });
+    expect(parseCommand(['conformance', '--since', '600'])).toEqual({
+      name: 'conformance',
+      since: '600',
+    });
+    expect(() => parseCommand(['up', '--since', '5'])).toThrow('conformance command');
+    expect(() => parseCommand(['conformance', 'x'])).toThrow('no argument');
+  });
+});

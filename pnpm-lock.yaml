@@ -63,6 +63,16 @@ importers:
         specifier: 2.57.2
         version: 2.57.2(typescript@7.0.2)(zod@4.6.5)
 
+  packages/conformance:
+    dependencies:
+      '@hashspan/core':
+        specifier: 1.0.0-rc.0
+        version: 1.0.0-rc.0(@opentelemetry/api@1.9.1)
+    devDependencies:
+      tsx:
+        specifier: 4.23.15
+        version: 4.23.15
+
   scenarios/call-batches:
     dependencies:
       '@hashspan-lab/common':
