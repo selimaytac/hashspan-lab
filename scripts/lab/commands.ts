@@ -5,6 +5,7 @@ import { DEFAULT_TESTNET_SCENARIOS } from './testnet.js';
 export const LOCAL_SCENARIOS = [
   'treasury',
   'paths',
+  'replacement',
   'call-batches',
   'user-operations',
   'user-operations-v07',
