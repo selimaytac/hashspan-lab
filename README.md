@@ -21,7 +21,8 @@ make demo                         # pnpm install --frozen-lockfile, then pnpm la
 `pnpm lab up` is the same.
 
 `pnpm lab up` checks your machine (each failure says what to do), starts the stack (collector, Tempo, Prometheus,
-Grafana), runs every scenario on a local chain, checks that the dashboards show data and prints their links, with an example trace.
+Grafana), runs every scenario on a local chain, checks that the dashboards show data and prints their links, with an
+example trace.
 
 ```sh
 pnpm lab status           # containers, readiness, links
@@ -32,7 +33,7 @@ pnpm lab nuke             # remove containers, volumes, images and .tools
 
 | Service | Address |
 |---|---|
-| Grafana | `http://127.0.0.1:13000`: the dashboards open without a login (only Grafana's Explore asks for one, `admin` / `admin`) |
+| Grafana | `http://127.0.0.1:13000` (the dashboards need no login; only Explore asks, `admin` / `admin`) |
 | Prometheus | `http://127.0.0.1:19090` (metrics arrive by OTLP push, so its targets page is empty) |
 | Tempo | `http://127.0.0.1:13200` (traces) |
 | Collector | OTLP on `127.0.0.1:14317` (gRPC) and `http://127.0.0.1:14318` (HTTP) |
@@ -44,21 +45,24 @@ tests, `make test-integration` runs the chain tests against a local Anvil.
 ## Testnet mode
 
 ```sh
-pnpm lab testnet [--chain base-sepolia|sepolia|arbitrum-sepolia|op-sepolia] [--scenario treasury,paths|all] [--rpc <url>] [--save] [--yes]
+pnpm lab testnet [--chain base-sepolia|sepolia|arbitrum-sepolia|op-sepolia] \
+  [--scenario treasury,paths|all] [--rpc <url>] [--save] [--yes]
 ```
 
 Runs scenarios on a real testnet with your own account, and sends the telemetry to the same local stack (`pnpm lab up`
 first). You give the key by hidden input, or in `LAB_PRIVATE_KEY`; `--save` keeps it in `.lab/testnet.env` (mode 600,
 not tracked by git), otherwise it is never written down. Before anything is sent the command checks that the RPC's
-`eth_chainId` is one of the four testnets and the one you chose (mainnets and unknown chains are refused, also with your own
-`--rpc` or `LAB_RPC_URL`), shows the derived address, the balance and about what the run costs, refuses a balance below it
-and asks to confirm (`--yes` skips the question). The key and the RPC URL are removed from every line the scenarios print.
+`eth_chainId` is one of the four testnets and the one you chose (mainnets and unknown chains are refused, also with
+your own `--rpc` or `LAB_RPC_URL`), shows the derived address, the balance and about what the run costs, refuses a
+balance below it and asks to confirm (`--yes` skips the question). The key and the RPC URL are removed from every line
+the scenarios print.
 
-Which scenarios can run depends on the chain and on what you give: `treasury`, `eip7702` and `soak` run on all four chains;
-`paths`, `call-batches`, `user-operations`, `user-operations-v07`, `x402` (needs test USDC on the account) and `sealed-fees`
-(read-only, needs no key) on Base Sepolia only; `cdp` also needs `CDP_API_KEY_ID`, `CDP_API_KEY_SECRET` and
-`CDP_WALLET_SECRET`. The others are listed as skipped, with the reason. The default is `treasury`. Costs are the measured
-cost of a treasury run on each chain, rounded up (`packages/common/src/testnets.ts`); after a run the command shows what it actually cost.
+Which scenarios can run depends on the chain and on what you give: `treasury`, `eip7702` and `soak` run on all four
+chains; `paths`, `call-batches`, `user-operations`, `user-operations-v07`, `x402` (needs test USDC on the account) and
+`sealed-fees` (read-only, needs no key) on Base Sepolia only; `cdp` also needs `CDP_API_KEY_ID`, `CDP_API_KEY_SECRET`
+and `CDP_WALLET_SECRET`. The others are listed as skipped, with the reason. The default is `treasury`. Costs are the
+measured cost of a treasury run on each chain, rounded up (`packages/common/src/testnets.ts`); after a run the command
+shows what it actually cost.
 
 ## First run of a release
 
@@ -69,7 +73,7 @@ project outside this workspace, saves the example as `agent.ts`, runs it against
 its OTLP endpoint, and checks in Tempo that `pay_vendor` has a `send` and a `confirm` span under it. The stack must be
 up (`pnpm lab up`). A command in the README that the lab does not know fails the run before anything is executed, so a
 change of the quick start is noticed; the example's code runs with an environment that holds no key and no token.
-`.github/workflows/first-run.yml` runs it weekly for `rc` and `latest`.
+`.github/workflows/first-run.yml` runs it on demand for any version or dist-tag.
 
 ## Conformance with the semantic conventions
 
@@ -77,8 +81,8 @@ change of the quick start is noticed; the example's code runs with an environmen
 and the metrics in Prometheus of the last hour and checks them against the semantic conventions that `@hashspan/core`
 exports (`ATTR_*`, `METRIC_*` and the documented values): an attribute of the `blockchain.` or `x402.` namespace, a
 metric, a metric label or a value of a closed set that the conventions do not have fails the check, and a documented
-metric without any series does too. It also lists the documented attributes that no scenario exercised, so the gaps of the
-lab are visible. The contract is read from the release under test, not copied.
+metric without any series does too. It also lists the documented attributes that no scenario exercised, so the gaps of
+the lab are visible. The contract is read from the release under test, not copied.
 
 ## Use the lab with your own agent
 

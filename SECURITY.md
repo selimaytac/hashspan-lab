@@ -15,8 +15,8 @@ Only the `main` branch is supported. The lab runs on your machine: it is not a h
 
 - The local stack binds every port to `127.0.0.1` only, and Grafana lets anonymous visitors view dashboards. Do not
   expose these ports to a network you do not trust.
-- Testnet mode (`pnpm lab testnet`) uses your own key, which it keeps in memory, or in `.lab/testnet.env` (mode 600) only
-  with `--save`. It refuses a chain id that is not one of four testnets and removes the key and the RPC URL from the
-  output of the scenarios. Use a key that holds testnet funds only, never one that holds real value.
+- Testnet mode (`pnpm lab testnet`) uses your own key, which it keeps in memory, or in `.lab/testnet.env` (mode 600)
+  only with `--save`. It refuses a chain id that is not one of four testnets and removes the key and the RPC URL from
+  the output of the scenarios. Use a key that holds testnet funds only, never one that holds real value.
 - Reports about a way to make the lab leak a key, send on a mainnet, run code from outside the repository, or weaken
   the pinned dependencies and images are in scope.
