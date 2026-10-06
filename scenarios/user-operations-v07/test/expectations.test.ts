@@ -31,4 +31,30 @@ describe('userOperationExpectations', () => {
       }
     }
   });
+
+  it('expects the paymaster on a sponsored operation and no paymaster on any other', () => {
+    const sponsor = '0x000000000000000000000000000000000000a1ce';
+    const mixed = userOperationExpectations({
+      chainId: 84532,
+      sender: '0xabc',
+      operations: [
+        { bundler: 'pimlico', userOpHash: `0x${'1'.repeat(64)}` },
+        { bundler: 'sponsored', userOpHash: `0x${'3'.repeat(64)}`, paymaster: sponsor },
+      ],
+    });
+    const confirmOf = (hash: string) =>
+      mixed.find(
+        (entry) =>
+          entry.name === 'confirm 84532' &&
+          entry.where?.['blockchain.user_operation.hash'] === hash,
+      );
+    expect(
+      confirmOf(`0x${'3'.repeat(64)}`)?.attributes?.['blockchain.user_operation.paymaster'],
+    ).toBe(sponsor);
+    expect(
+      confirmOf(`0x${'1'.repeat(64)}`)?.attributes?.['blockchain.user_operation.paymaster'],
+    ).toEqual({
+      absent: true,
+    });
+  });
 });

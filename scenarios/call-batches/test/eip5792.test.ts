@@ -21,9 +21,9 @@ const node = (code: number, message: string) =>
   });
 
 describe("viem's fallback on an RPC", () => {
-  it("is not taken on Base's public RPC answer (-32604), as with viem 2.57", async () => {
+  it("is taken on Base's public RPC answer (-32604) since viem 2.57.3 (wevm/viem#5178, fixed in #5180)", async () => {
     expect(await publicRpcFallback(node(-32604, 'this request method is not supported'))).toBe(
-      'no fallback',
+      'falls back',
     );
   });
 

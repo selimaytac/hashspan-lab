@@ -10,6 +10,8 @@ export const stepName = (bundler: string): string => `step user-operation ${bund
 export interface SentOperation {
   bundler: string;
   userOpHash: string;
+  /** The paymaster that sponsored the operation, lower-case; undefined when the account paid itself. */
+  paymaster?: string | undefined;
 }
 
 export interface ExpectationOptions {
@@ -37,7 +39,7 @@ export function userOperationExpectations({
     { name: ROOT_SPAN, count: 1, sameTrace: true },
     { name: `send ${chainId}`, count: operations.length, sameTrace: true },
     { name: `confirm ${chainId}`, count: operations.length, sameTrace: true },
-    ...operations.flatMap(({ bundler, userOpHash }): SpanExpectation[] => [
+    ...operations.flatMap(({ bundler, userOpHash, paymaster }): SpanExpectation[] => [
       {
         name: stepName(bundler),
         count: 1,
@@ -72,6 +74,8 @@ export function userOperationExpectations({
           'blockchain.user_operation.gas.cost': /^\d+$/,
           'blockchain.tx.hash': /^0x[0-9a-f]{64}$/,
           'blockchain.block.number': { present: true },
+          // Present when a paymaster paid for the operation, absent when none did (semconv).
+          'blockchain.user_operation.paymaster': paymaster ? paymaster : { absent: true },
         },
       },
     ]),

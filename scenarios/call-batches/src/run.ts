@@ -19,7 +19,7 @@ import {
 import { trace } from '@opentelemetry/api';
 import { createPublicClient, createWalletClient, type Hash, type Hex, http } from 'viem';
 import { baseSepolia } from 'viem/chains';
-import { type PublicRpcFallback, publicRpcFallback, withoutEip5792 } from './eip5792.js';
+import { type PublicRpcFallback, publicRpcFallback } from './eip5792.js';
 import { AGENT_NAME, batchExpectations, ROOT_SPAN } from './expectations.js';
 
 export const SCENARIO = 'call-batches';
@@ -104,7 +104,7 @@ export async function runScenario(
     const wallet = createWalletClient({
       account,
       chain: baseSepolia,
-      transport: withoutEip5792(rpcUrl),
+      transport: http(rpcUrl),
       ...polling,
     }).extend(hashspan);
     const tracer = trace.getTracer('hashspan-lab-call-batches');

@@ -77,6 +77,9 @@ const fundedKey = async () => {
   return privateKey;
 };
 
+/** Nobody's address: the stand-in EntryPoint reports the paymaster of an operation, it does not run one. */
+const SPONSOR = '0x000000000000000000000000000000000000a1ce';
+
 const localBundlers = () =>
   bundlers.map((bundler, index) => ({
     name: index === 0 ? 'pimlico' : 'candide',
@@ -89,7 +92,11 @@ describe('the EntryPoint v0.7 user operations scenario on a local chain', () => 
     const summary = await runScenario(telemetry, {
       env: { BASE_SEPOLIA_PRIVATE_KEY: await fundedKey(), BASE_SEPOLIA_RPC_URL: rpcUrl },
       log: () => {},
-      bundlers: localBundlers,
+      bundlers: () => [
+        ...localBundlers(),
+        // A paymaster pays for the third one; the stand-in EntryPoint reports it in the event.
+        { name: 'sponsored', url: bundlers[0]?.url ?? '', paymaster: SPONSOR },
+      ],
       smartAccount: localSmartAccount,
       confirmations: 1,
       pollingInterval: 100,
@@ -98,13 +105,30 @@ describe('the EntryPoint v0.7 user operations scenario on a local chain', () => 
     expect(summary.error).toBeNull();
     expect(summary.findings).toEqual([]);
     expect(summary.outcome).toBe('pass');
-    expect(summary.userOperations.map(({ bundler }) => bundler)).toEqual(['pimlico', 'candide']);
+    expect(summary.userOperations.map(({ bundler }) => bundler)).toEqual([
+      'pimlico',
+      'candide',
+      'sponsored',
+    ]);
+    expect(summary.userOperations.map(({ sponsored }) => sponsored ?? false)).toEqual([
+      false,
+      false,
+      true,
+    ]);
     for (const { userOpHash } of summary.userOperations)
       expect(userOpHash).toMatch(/^0x[0-9a-f]{64}$/);
-    expect(new Set(summary.userOperations.map(({ userOpHash }) => userOpHash)).size).toBe(2);
+    expect(new Set(summary.userOperations.map(({ userOpHash }) => userOpHash)).size).toBe(3);
     // The smart account starts without ether, so the first run tops it up once, for both operations.
     expect(summary.setupTxHashes).toHaveLength(1);
     expect(captured.filter((span) => span.name === stepName('candide'))).toHaveLength(1);
+    // The paymaster is recorded on the confirm span of the sponsored operation only, and the ledger has the fact, not the
+    // address.
+    const paymasters = captured
+      .filter((span) => span.name === 'confirm 84532')
+      .map((span) => span.attributes['blockchain.user_operation.paymaster']);
+    expect(paymasters.filter((value) => value === SPONSOR)).toHaveLength(1);
+    expect(paymasters.filter((value) => value === undefined)).toHaveLength(2);
+    expect(JSON.stringify(summary)).not.toContain(SPONSOR);
     const recorded = JSON.stringify([
       captured.map((span) => [span.name, span.attributes, span.events]),
       summary,

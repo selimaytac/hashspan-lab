@@ -16,9 +16,11 @@ import {
 } from '@hashspan-lab/common';
 import { trace } from '@opentelemetry/api';
 import {
+  type Address,
   createPublicClient,
   createWalletClient,
   type Hash,
+  type Hex,
   http,
   type LocalAccount,
   type PublicClient,
@@ -45,6 +47,21 @@ const RECEIPT_TIMEOUT_MS = 180_000;
 export const hashspan: ReturnType<typeof withHashspan> = withHashspan({
   agent: { name: AGENT_NAME },
 });
+
+/**
+ * A paymaster as viem's bundler client takes it: the same answer for the stub and the final data. Only the local
+ * EntryPoint stand-in is sent such an operation, and it does not validate the paymaster; it reports it in the event.
+ */
+function sponsor(paymaster: Address) {
+  return {
+    getPaymasterData: async () => ({
+      paymaster,
+      paymasterData: '0x' as Hex,
+      paymasterVerificationGasLimit: 100_000n,
+      paymasterPostOpGasLimit: 50_000n,
+    }),
+  };
+}
 
 /** Builds the smart account the run sends from, owned by the lab account. */
 export type SmartAccountFactory = (
@@ -81,7 +98,8 @@ export interface UserOperationSummary {
   findings: Finding[];
   durationMs: number;
   /** The operations sent, by bundler name, in order. */
-  userOperations: SentOperation[];
+  /** The operations sent, by bundler. `sponsored` when a paymaster paid; its address stays out of the ledger. */
+  userOperations: { bundler: string; userOpHash: string; sponsored?: boolean }[];
   setupTxHashes: Hash[];
   exportErrors: string[];
 }
@@ -187,13 +205,18 @@ export async function runScenario(
             ...(bundler.estimateFeesPerGas
               ? { userOperation: { estimateFeesPerGas: bundler.estimateFeesPerGas } }
               : {}),
+            ...(bundler.paymaster ? { paymaster: sponsor(bundler.paymaster) } : {}),
             ...polling,
           }).extend(hashspan);
           await fundFor(() => bundlerClient.prepareUserOperation({ calls }));
           await tracer.startActiveSpan(stepName(bundler.name), async (span) => {
             try {
               const hash = await bundlerClient.sendUserOperation({ calls });
-              sent.push({ bundler: bundler.name, userOpHash: hash.toLowerCase() });
+              sent.push({
+                bundler: bundler.name,
+                userOpHash: hash.toLowerCase(),
+                paymaster: bundler.paymaster?.toLowerCase(),
+              });
               const receipt = await bundlerClient.waitForUserOperationReceipt({
                 hash,
                 timeout: RECEIPT_TIMEOUT_MS,
@@ -236,7 +259,11 @@ export async function runScenario(
     errorKind: kind,
     findings,
     durationMs: Date.now() - startedAt.getTime(),
-    userOperations: sent,
+    userOperations: sent.map(({ bundler, userOpHash, paymaster }) => ({
+      bundler,
+      userOpHash,
+      ...(paymaster ? { sponsored: true } : {}),
+    })),
     setupTxHashes,
     exportErrors: errors,
   };
