@@ -1,6 +1,7 @@
 import type { SpanExpectation } from '@hashspan-lab/common';
 
 export const AGENT_NAME = 'replacement-agent';
+export const AGENT_ID = 'replacement-agent-1';
 export const ROOT_SPAN = 'replacement run';
 
 /** The three ways viem tells a replacement apart, each as a step of the run. */
@@ -24,7 +25,14 @@ export function replacementExpectations({ chainId }: { chainId: number }): SpanE
   return [
     { name: ROOT_SPAN, count: 1, sameTrace: true },
     // The original and the replacement of each step both go through the traced wallet.
-    { name: send, count: STEPS.length * 2, parent: /^step /, sameTrace: true },
+    {
+      name: send,
+      count: STEPS.length * 2,
+      parent: /^step /,
+      sameTrace: true,
+      // The static identity wins over a Baggage that says otherwise (ADR 0011).
+      attributes: { 'gen_ai.agent.name': AGENT_NAME, 'gen_ai.agent.id': AGENT_ID },
+    },
     ...STEPS.map(
       ({ name, reason }): SpanExpectation => ({
         name: confirm,
@@ -37,6 +45,7 @@ export function replacementExpectations({ chainId }: { chainId: number }): SpanE
           'blockchain.tx.hash': HASH,
           'blockchain.tx.replacement.hash': HASH,
           'gen_ai.agent.name': AGENT_NAME,
+          'gen_ai.agent.id': AGENT_ID,
           // A replaced transaction has no receipt of its own.
           'blockchain.block.number': { absent: true },
           'blockchain.tx.gas.used': { absent: true },
@@ -57,6 +66,7 @@ export function replacementExpectations({ chainId }: { chainId: number }): SpanE
         'blockchain.tx.gas.used': { present: true },
         'blockchain.tx.fee': /^\d+$/,
         'gen_ai.agent.name': AGENT_NAME,
+        'gen_ai.agent.id': AGENT_ID,
       },
     },
   ];

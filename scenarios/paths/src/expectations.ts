@@ -2,6 +2,7 @@ import type { SpanExpectation } from '@hashspan-lab/common';
 import { REVERTS } from './contracts.js';
 
 export const AGENT_NAME = 'paths-agent';
+export const BAGGAGE_AGENT_ID = 'paths-agent-from-baggage';
 export const ROOT_SPAN = 'paths run';
 
 export interface ExpectationOptions {
@@ -27,12 +28,20 @@ export function pathsExpectations({ chainId, opStack }: ExpectationOptions): Spa
     'blockchain.tx.gas.used': { present: true },
     'blockchain.tx.fee': /^\d+$/,
     'gen_ai.agent.name': AGENT_NAME,
+    'gen_ai.agent.id': BAGGAGE_AGENT_ID,
     ...(opStack ? { 'blockchain.tx.l1_fee': /^\d+$/ } : {}),
   } as const;
   return [
     { name: ROOT_SPAN, count: 1, sameTrace: true },
     // Background confirmation, the three reverting calls; the watched transaction has no send span.
-    { name: send, count: 4, parent: /^step /, sameTrace: true },
+    {
+      name: send,
+      count: 4,
+      parent: /^step /,
+      sameTrace: true,
+      // The static identity has no id: Baggage fills it (ADR 0011).
+      attributes: { 'gen_ai.agent.name': AGENT_NAME, 'gen_ai.agent.id': BAGGAGE_AGENT_ID },
+    },
     // The background confirmation and the watched transaction: each under the step it ran in (checked per step by
     // the ledger entry's `tool`; `parent` here only says the span is under one of the two).
     {

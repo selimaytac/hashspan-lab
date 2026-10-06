@@ -14,14 +14,16 @@ import {
   safeErrorMessage,
   worstCaseCost,
 } from '@hashspan-lab/common';
-import { trace } from '@opentelemetry/api';
+import { context, propagation, trace } from '@opentelemetry/api';
 import type { ReadableSpan } from '@opentelemetry/sdk-trace-base';
 import { type Address, createPublicClient, createWalletClient, type Hash, http } from 'viem';
 import { baseSepolia } from 'viem/chains';
 import { deployCode, REVERTS, revertAbi, revertingWith } from './contracts.js';
-import { AGENT_NAME, pathsExpectations, ROOT_SPAN } from './expectations.js';
+import { AGENT_NAME, BAGGAGE_AGENT_ID, pathsExpectations, ROOT_SPAN } from './expectations.js';
 
 export const SCENARIO = 'paths';
+/** The static identity has a name only: the agent id comes from Baggage, which fills what the static fields leave unset. */
+const AGENT_BAGGAGE = propagation.createBaggage({ 'gen_ai.agent.id': { value: BAGGAGE_AGENT_ID } });
 export const EXPLORER = 'https://sepolia.basescan.org';
 /** Gas of each reverting call: explicit, so the call is mined and reverts instead of failing estimation. */
 const REVERT_GAS = 100_000n;
@@ -148,31 +150,35 @@ export async function runScenario(
         }
       });
 
-    await tracer.startActiveSpan(ROOT_SPAN, async (root) => {
-      try {
-        // A send without a wait: background confirmation records the receipt.
-        await step('background', () => wallet.sendTransaction({ to: account.address, value: 1n }));
-        // A transaction sent by an untraced client, confirmed through watch().
-        await step('watch', async () => {
-          const hash = await untraced.sendTransaction({ to: account.address, value: 1n });
-          hashspan.watch(reader, { hash });
-        });
-        // Three reverts, each decoded from its own kind of revert data.
-        for (const [i, { step: name }] of REVERTS.entries()) {
-          await step(name, async () => {
-            const hash = await wallet.writeContract({
-              address: contracts[i] as Address,
-              abi: revertAbi,
-              functionName: 'trigger',
-              gas: REVERT_GAS,
-            });
-            await reader.waitForTransactionReceipt({ hash });
+    await context.with(propagation.setBaggage(context.active(), AGENT_BAGGAGE), () =>
+      tracer.startActiveSpan(ROOT_SPAN, async (root) => {
+        try {
+          // A send without a wait: background confirmation records the receipt.
+          await step('background', () =>
+            wallet.sendTransaction({ to: account.address, value: 1n }),
+          );
+          // A transaction sent by an untraced client, confirmed through watch().
+          await step('watch', async () => {
+            const hash = await untraced.sendTransaction({ to: account.address, value: 1n });
+            hashspan.watch(reader, { hash });
           });
+          // Three reverts, each decoded from its own kind of revert data.
+          for (const [i, { step: name }] of REVERTS.entries()) {
+            await step(name, async () => {
+              const hash = await wallet.writeContract({
+                address: contracts[i] as Address,
+                abi: revertAbi,
+                functionName: 'trigger',
+                gas: REVERT_GAS,
+              });
+              await reader.waitForTransactionReceipt({ hash });
+            });
+          }
+        } finally {
+          root.end();
         }
-      } finally {
-        root.end();
-      }
-    });
+      }),
+    );
   } catch (caught) {
     error = failedStep
       ? `step ${failedStep}: ${safeErrorMessage(caught)}`
