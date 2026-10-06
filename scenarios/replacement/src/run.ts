@@ -11,7 +11,7 @@ import {
   readBaseSepoliaEnv,
   safeErrorMessage,
 } from '@hashspan-lab/common';
-import { trace } from '@opentelemetry/api';
+import { context, propagation, trace } from '@opentelemetry/api';
 import type { ReadableSpan } from '@opentelemetry/sdk-trace-base';
 import {
   type Address,
@@ -23,7 +23,7 @@ import {
 } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { baseSepolia } from 'viem/chains';
-import { AGENT_NAME, ROOT_SPAN, replacementExpectations, STEPS } from './expectations.js';
+import { AGENT_ID, AGENT_NAME, ROOT_SPAN, replacementExpectations, STEPS } from './expectations.js';
 import { replacementLinkFindings } from './links.js';
 
 export const SCENARIO = 'replacement';
@@ -35,9 +35,14 @@ const OTHER_RECIPIENT: Address = '0x000000000000000000000000000000000000beef';
 const LOW = { maxFeePerGas: parseGwei('5'), maxPriorityFeePerGas: parseGwei('1') };
 const HIGH = { maxFeePerGas: parseGwei('10'), maxPriorityFeePerGas: parseGwei('2') };
 const TRANSFER_GAS = 21_000n;
+/** A Baggage that disagrees with the static identity: the static fields must win (ADR 0011). */
+const CONFLICTING_BAGGAGE = propagation.createBaggage({
+  'gen_ai.agent.id': { value: 'id-from-baggage' },
+  'gen_ai.agent.name': { value: 'name-from-baggage' },
+});
 
 export const hashspan: ReturnType<typeof withHashspan> = withHashspan({
-  agent: { name: AGENT_NAME },
+  agent: { name: AGENT_NAME, id: AGENT_ID },
 });
 
 export interface ScenarioOptions {
@@ -149,42 +154,44 @@ export async function runScenario(
       },
     } as const;
 
-    await tracer.startActiveSpan(ROOT_SPAN, async (root) => {
-      try {
-        for (const { name } of STEPS) {
-          await step(name, async () => {
-            const nonce = await plain.getTransactionCount({
-              address: account.address,
-              blockTag: 'pending',
+    await context.with(propagation.setBaggage(context.active(), CONFLICTING_BAGGAGE), () =>
+      tracer.startActiveSpan(ROOT_SPAN, async (root) => {
+        try {
+          for (const { name } of STEPS) {
+            await step(name, async () => {
+              const nonce = await plain.getTransactionCount({
+                address: account.address,
+                blockTag: 'pending',
+              });
+              const { original, replacement } = transfers[name];
+              const first = await wallet.sendTransaction({
+                ...original,
+                nonce,
+                gas: TRANSFER_GAS,
+                ...LOW,
+              });
+              // viem looks for a replacement while it waits: the wait must be running before the replacement exists.
+              const waiting = reader.waitForTransactionReceipt({ hash: first, timeout: 30_000 });
+              await sleep(4 * pollingInterval);
+              const second = await wallet.sendTransaction({
+                ...replacement,
+                nonce,
+                gas: TRANSFER_GAS,
+                ...HIGH,
+              });
+              await mine();
+              const receipt = await waiting;
+              if (receipt.transactionHash !== second) {
+                throw new Error('the wait did not end with the receipt of the replacement');
+              }
+              log(`${name}: replaced and mined.`);
             });
-            const { original, replacement } = transfers[name];
-            const first = await wallet.sendTransaction({
-              ...original,
-              nonce,
-              gas: TRANSFER_GAS,
-              ...LOW,
-            });
-            // viem looks for a replacement while it waits: the wait must be running before the replacement exists.
-            const waiting = reader.waitForTransactionReceipt({ hash: first, timeout: 30_000 });
-            await sleep(4 * pollingInterval);
-            const second = await wallet.sendTransaction({
-              ...replacement,
-              nonce,
-              gas: TRANSFER_GAS,
-              ...HIGH,
-            });
-            await mine();
-            const receipt = await waiting;
-            if (receipt.transactionHash !== second) {
-              throw new Error('the wait did not end with the receipt of the replacement');
-            }
-            log(`${name}: replaced and mined.`);
-          });
+          }
+        } finally {
+          root.end();
         }
-      } finally {
-        root.end();
-      }
-    });
+      }),
+    );
   } catch (caught) {
     error = failedStep
       ? `step ${failedStep}: ${safeErrorMessage(caught)}`
