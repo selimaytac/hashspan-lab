@@ -9,6 +9,9 @@ import { createPublicClient, http, numberToHex, parseEther } from 'viem';
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts';
 import { AGENT_NAME } from './expectations.js';
 
+/** Nobody's address: the stand-in EntryPoint does not run a paymaster, it only reports the one in the operation. */
+const LOCAL_PAYMASTER = '0x000000000000000000000000000000000000a1ce';
+
 // The scenario against a local Anvil that reports Base Sepolia's chain id, with a fresh, funded key that is never
 // written down, the stand-in EntryPoint v0.7 and test account, and two local bundlers named like the hosted ones.
 // Telemetry goes wherever OTEL_EXPORTER_OTLP_ENDPOINT points (`make scenario-local` sets the stack).
@@ -42,6 +45,8 @@ try {
     bundlers: () => [
       { name: 'pimlico', url: first.url },
       { name: 'candide', url: second.url },
+      // A paymaster pays for this one: the stand-in EntryPoint reports it in the event (a local run only).
+      { name: 'sponsored', url: first.url, paymaster: LOCAL_PAYMASTER },
     ],
     smartAccount: localSmartAccount,
     confirmations: 1,

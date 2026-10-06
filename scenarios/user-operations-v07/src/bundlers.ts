@@ -1,5 +1,5 @@
 import { LabSetupError } from '@hashspan-lab/common';
-import { createPublicClient, http } from 'viem';
+import { type Address, createPublicClient, http } from 'viem';
 
 /** The operation's fees, as a bundler wants them. */
 export type FeeEstimator = () => Promise<{ maxFeePerGas: bigint; maxPriorityFeePerGas: bigint }>;
@@ -10,6 +10,8 @@ export interface Bundler {
   url: string;
   /** The bundler's own fee estimate; the chain's when unset. */
   estimateFeesPerGas?: FeeEstimator;
+  /** A paymaster that sponsors the operation (a local run only: the stand-in EntryPoint does not validate it). */
+  paymaster?: Address;
 }
 
 /**
