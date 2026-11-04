@@ -19,7 +19,7 @@
     "@opentelemetry/sdk-trace-base": "2.11.0",
     "ai": "7.0.127",
     "viem": "2.57.3",
-    "zod": "4.6.5"
+    "zod": "4.6.6"
   },
   "devDependencies": {
     "prool": "0.2.16",
